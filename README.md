@@ -1,14 +1,6 @@
 # xynergy
 
-## Differences from Xynergy
-
-A significant number of changes have been made from Xynergy that warranted migration to a separate repository, including:
-- No classes, just a lot of functions.
-- Polars instead of pandas
-- Input/output DataFrames are 'tidy' (one response per row)
-- Arbitrary columns can be used for defining experimental conditions, rather than required columns (such as cell line, pairindex, etc)
-- Multiple 'entrypoints' into xynergy (see 'Workflow')
-- A little bit more robust checking to ensure your inputs are correct (without being draconian, hopefully)
+Fast and high throughput Drug Synergy Prediction from Minimal Combination Data via Radial Basis Function Surface Interpolation combined with NMF and XGBoost
 
 ## Workflow
 
