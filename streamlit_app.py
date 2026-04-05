@@ -213,7 +213,7 @@ if "result" in st.session_state:
     # --- Plots ---
     st.header("4. Visualizations")
 
-    from xynergy.plot import plot_response_landscape
+    from xynergy.plot import plot_response_landscape, plot_synergy_3d
 
     experiments = result["experiment_id"].unique().sort().to_list()
     selected_exp = st.selectbox("Select experiment", experiments)
@@ -221,32 +221,58 @@ if "result" in st.session_state:
 
     # Response landscape
     st.subheader("Response landscape")
-    chart = plot_response_landscape(exp_df)
-    st.altair_chart(chart, use_container_width=True)
+    tab_2d_resp, tab_3d_resp = st.tabs(["2D Heatmap", "3D Surface"])
+    with tab_2d_resp:
+        chart = plot_response_landscape(exp_df)
+        st.altair_chart(chart, use_container_width=True)
+    with tab_3d_resp:
+        fig_3d_resp = plot_synergy_3d(
+            exp_df, response_col="response", response_label="Response"
+        )
+        st.plotly_chart(fig_3d_resp, use_container_width=True)
 
     # Synergy landscapes
     syn_cols = [c for c in result.columns if c.endswith("_syn")]
     if syn_cols:
         st.subheader("Synergy landscapes")
         selected_syn = st.selectbox("Synergy method to plot", syn_cols)
-        syn_chart = plot_response_landscape(
-            exp_df,
-            response_col=selected_syn,
-            scheme="redblue",
-            response_label=selected_syn,
-        )
-        st.altair_chart(syn_chart, use_container_width=True)
+        tab_2d_syn, tab_3d_syn = st.tabs(["2D Heatmap", "3D Surface"])
+        with tab_2d_syn:
+            syn_chart = plot_response_landscape(
+                exp_df,
+                response_col=selected_syn,
+                scheme="redblue",
+                response_label=selected_syn,
+            )
+            st.altair_chart(syn_chart, use_container_width=True)
+        with tab_3d_syn:
+            fig_3d_syn = plot_synergy_3d(
+                exp_df,
+                response_col=selected_syn,
+                response_label=selected_syn,
+                colorscale="RdBu",
+            )
+            st.plotly_chart(fig_3d_syn, use_container_width=True)
 
     # Factorization landscapes
     factor_cols = [c for c in result.columns if c.startswith("response_")]
     if factor_cols:
         st.subheader("Factorization approximations")
         selected_factor = st.selectbox("Factorization method to plot", factor_cols)
-        factor_chart = plot_response_landscape(
-            exp_df,
-            response_col=selected_factor,
-            response_label=selected_factor,
-        )
-        st.altair_chart(factor_chart, use_container_width=True)
+        tab_2d_fac, tab_3d_fac = st.tabs(["2D Heatmap", "3D Surface"])
+        with tab_2d_fac:
+            factor_chart = plot_response_landscape(
+                exp_df,
+                response_col=selected_factor,
+                response_label=selected_factor,
+            )
+            st.altair_chart(factor_chart, use_container_width=True)
+        with tab_3d_fac:
+            fig_3d_fac = plot_synergy_3d(
+                exp_df,
+                response_col=selected_factor,
+                response_label=selected_factor,
+            )
+            st.plotly_chart(fig_3d_fac, use_container_width=True)
 else:
     st.info("Configure parameters in the sidebar, load data above, then click **Run xynergy**.")
