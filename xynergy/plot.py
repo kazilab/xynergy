@@ -1,5 +1,103 @@
 import altair as alt
+import numpy as np
+import plotly.graph_objects as go
 import polars as pl
+from scipy.interpolate import griddata
+
+
+def plot_synergy_3d(
+    df: pl.DataFrame,
+    dose_cols: list[str] = ["dose_a", "dose_b"],
+    response_col: str = "response",
+    response_label: str = "Response",
+    colorscale: str = "Viridis",
+    interpolate: bool = True,
+) -> go.Figure:
+    """Create an interactive 3D surface plot of synergy or response data.
+
+    Parameters
+    ----------
+    df : polars.DataFrame
+        Must contain at least the two dose columns and one response column.
+    dose_cols : list[str]
+        Two column names for drug doses.
+    response_col : str
+        Column with response/synergy values.
+    response_label : str
+        Label for the Z-axis and color bar.
+    colorscale : str
+        Plotly colorscale name.
+    interpolate : bool
+        If True, interpolate onto a fine grid for a smooth surface.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure
+    """
+    a, b = dose_cols
+
+    # Aggregate duplicates
+    pivot = (
+        df.group_by(dose_cols)
+        .agg(pl.col(response_col).mean())
+        .sort(dose_cols)
+    )
+
+    dose_a_vals = pivot[a].unique().sort().to_numpy()
+    dose_b_vals = pivot[b].unique().sort().to_numpy()
+
+    # Build the Z matrix
+    z_matrix = np.full((len(dose_a_vals), len(dose_b_vals)), np.nan)
+    a_idx = {v: i for i, v in enumerate(dose_a_vals)}
+    b_idx = {v: i for i, v in enumerate(dose_b_vals)}
+    for row in pivot.iter_rows(named=True):
+        z_matrix[a_idx[row[a]], b_idx[row[b]]] = row[response_col]
+
+    if interpolate and min(len(dose_a_vals), len(dose_b_vals)) >= 3:
+        # Create fine grid for smooth surface
+        x_coarse, y_coarse = np.meshgrid(
+            np.arange(len(dose_b_vals)), np.arange(len(dose_a_vals))
+        )
+        valid = ~np.isnan(z_matrix)
+        x_fine = np.linspace(0, len(dose_b_vals) - 1, 50)
+        y_fine = np.linspace(0, len(dose_a_vals) - 1, 50)
+        x_fine_grid, y_fine_grid = np.meshgrid(x_fine, y_fine)
+        z_fine = griddata(
+            (x_coarse[valid], y_coarse[valid]),
+            z_matrix[valid],
+            (x_fine_grid, y_fine_grid),
+            method="cubic",
+        )
+        # Map fine grid indices back to dose values
+        x_labels = np.interp(x_fine, np.arange(len(dose_b_vals)), dose_b_vals)
+        y_labels = np.interp(y_fine, np.arange(len(dose_a_vals)), dose_a_vals)
+    else:
+        x_labels = dose_b_vals
+        y_labels = dose_a_vals
+        z_fine = z_matrix
+
+    fig = go.Figure(
+        data=[
+            go.Surface(
+                x=x_labels,
+                y=y_labels,
+                z=z_fine,
+                colorscale=colorscale,
+                colorbar=dict(title=response_label),
+                opacity=0.9,
+            )
+        ]
+    )
+    fig.update_layout(
+        scene=dict(
+            xaxis_title=b,
+            yaxis_title=a,
+            zaxis_title=response_label,
+        ),
+        margin=dict(l=0, r=0, t=40, b=0),
+        height=550,
+    )
+    return fig
 
 
 # TODO allow for axis labels
