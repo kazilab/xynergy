@@ -2,7 +2,9 @@
 
 import io
 import os
+import sys
 import tempfile
+from pathlib import Path
 
 # Matplotlib needs a writable config directory in this environment.
 MPLCONFIGDIR = os.path.join(tempfile.gettempdir(), "xynergy-mpl")
@@ -12,6 +14,7 @@ os.environ.setdefault("MPLCONFIGDIR", MPLCONFIGDIR)
 import matplotlib
 import polars as pl
 import streamlit as st
+import streamlit.runtime as st_runtime
 from xynergy._meta import (
     APP_NAME,
     APP_TAGLINE,
@@ -36,7 +39,15 @@ def _factorization_result_columns(columns: list[str]) -> list[str]:
     return [column for column in columns if column.startswith("resp_imputed_")]
 
 
+def _running_in_raw_mode() -> bool:
+    return not st_runtime.exists() and Path(sys.argv[0]).name == Path(__file__).name
+
+
 HAS_CVXPY = _module_is_importable("cvxpy")
+
+if _running_in_raw_mode():
+    print("Run this app with `streamlit run streamlit_app.py`.")
+    raise SystemExit(1)
 
 st.set_page_config(page_title=APP_NAME, page_icon="🧬", layout="wide")
 
