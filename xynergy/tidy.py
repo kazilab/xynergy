@@ -2,8 +2,8 @@ import warnings
 
 import polars as pl
 
-from xynergy.util import make_list_if_str_or_none
-from xynergy.validate import *
+from .util import make_list_if_str_or_none
+from .validate import *
 
 
 def tidy(

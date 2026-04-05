@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.linalg as la
 import polars as pl
-from xynergy.util import venter
+from .util import venter
 
 try:
     import optuna

@@ -4,7 +4,7 @@ import numpy as np
 import polars as pl
 from polars import col
 
-from xynergy.fit import ll4
+from .fit import ll4
 
 EXAMPLE_COLUMN_RENAME_MAP = {
     "Experiment_ID": "experiment_source_id",

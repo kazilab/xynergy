@@ -1,8 +1,8 @@
 import numpy as np
 import scipy.linalg as la
 import optuna
-from xynergy.factor import _to_mat
-import xynergy.fit as xfit
+from .factor import _to_mat
+import .fit as xfit
 import polars as pl
 
 

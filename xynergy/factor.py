@@ -3,14 +3,14 @@ import numpy.linalg as la
 import polars as pl
 import scipy.optimize as opt
 import sklearn.decomposition as decomp
-from xynergy.lnmf import _lnmf
+from .lnmf import _lnmf
 
-from xynergy.util import (
+from .util import (
     _add_id_if_no_experiment_cols,
     make_list_if_str_or_none,
     venter,
 )
-from xynergy.validate import *
+from .validate import *
 
 try:
     import cvxpy as cp
@@ -177,8 +177,7 @@ def mf_combination(
 ):
     """Run all four matrix factorization methods and combine results.
 
-    This is a convenience wrapper that runs NMF, SVD, PMF, and RPCA together,
-    equivalent to xynergy008's ``mf_combination`` function.
+    This is a convenience wrapper that runs NMF, SVD, PMF, and RPCA.
 
     Parameters
     ----------

@@ -2,7 +2,7 @@
 import numpy as np
 import scipy.linalg as la
 import optuna
-from xynergy.factor import _to_mat
+from .factor import _to_mat
 import polars as pl
 
 

@@ -1,6 +1,4 @@
 """Quality scores, AUC/AAC, XEPTO, and Drug Sensitivity Score (DSS).
-
-Adapted from xynergy008's scores.py and tools.py to work with xynergy's
 Polars-based pipeline and 4PL function conventions.
 """
 
@@ -17,7 +15,7 @@ from sklearn.metrics import (
     r2_score,
 )
 
-from xynergy.fit import _ll4, fit_curve
+from .fit import _ll4, fit_curve
 
 
 def quality_scores(original_values, fitted_values):

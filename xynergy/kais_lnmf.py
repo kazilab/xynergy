@@ -49,7 +49,7 @@ def my_lnmf(
     return W, H
 
 
-from xynergy.dev import rm_off_axis
+from .dev import rm_off_axis
 import polars as pl
 
 data = pl.read_csv("../data/150_high_low_medium_zip.csv")

@@ -1,13 +1,13 @@
 import numpy as np
 import polars as pl
 
-import xynergy.fit as fit
-from xynergy.fit import (
+import .fit as fit
+from .fit import (
     _add_uncombined_drug_fitted_responses,
     _add_uncombined_drug_responses,
 )
-from xynergy.util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
-from xynergy.validate import ensure_all_cols_in_df
+from .util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
+from .validate import ensure_all_cols_in_df
 
 # References for different synergy models
 

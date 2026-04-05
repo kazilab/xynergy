@@ -1,6 +1,6 @@
 import polars as pl
-from xynergy.util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
-from xynergy.validate import ensure_all_cols_in_df
+from .util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
+from .validate import ensure_all_cols_in_df
 
 
 def rm_off_axis(

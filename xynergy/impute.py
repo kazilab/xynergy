@@ -13,9 +13,9 @@ from sklearn.linear_model import LassoCV
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from xgboost import XGBRegressor
 
-from xynergy.fit import add_uncombined_drug_responses
-from xynergy.util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
-from xynergy.validate import *
+from .fit import add_uncombined_drug_responses
+from .util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
+from .validate import *
 
 
 def _iterative_svd_complete(

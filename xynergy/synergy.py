@@ -1,13 +1,13 @@
 import polars as pl
 
-import xynergy.fit as xfit
-from xynergy.fit import (
+import .fit as xfit
+from .fit import (
     _add_uncombined_drug_fitted_responses,
     _add_uncombined_drug_responses,
 )
-from xynergy.reference import _bliss, _hsa, _loewe, _loewe_ci, _zip
-from xynergy.util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
-from xynergy.validate import ensure_all_cols_in_df
+from .reference import _bliss, _hsa, _loewe, _loewe_ci, _zip
+from .util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
+from .validate import ensure_all_cols_in_df
 
 
 def add_synergy(

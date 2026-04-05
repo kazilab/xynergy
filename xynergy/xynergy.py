@@ -1,8 +1,8 @@
-from xynergy.synergy import add_synergy
-from xynergy.tidy import tidy
-from xynergy.impute import pre_impute, post_impute
-from xynergy.factor import matrix_factorize
-from xynergy.util import make_list_if_str_or_none
+from .synergy import add_synergy
+from .tidy import tidy
+from .impute import pre_impute, post_impute
+from .factor import matrix_factorize
+from .util import make_list_if_str_or_none
 import polars as pl
 
 

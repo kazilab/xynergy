@@ -1,6 +1,6 @@
 """Matplotlib-based plotting functions for dose-response and synergy visualization.
 
-Adapted from xynergy008's plots.py. These complement the Altair-based
+These complement the Altair-based
 ``plot_response_landscape`` in ``plot.py``.
 """
 
