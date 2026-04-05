@@ -15,7 +15,7 @@ from xgboost import XGBRegressor
 
 from .fit import add_uncombined_drug_responses
 from .util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
-from .validate import *
+from .validate import ensure_all_cols_in_df
 
 
 def _iterative_svd_complete(

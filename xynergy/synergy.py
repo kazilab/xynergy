@@ -1,9 +1,11 @@
 import polars as pl
 
-import .fit as xfit
 from .fit import (
     _add_uncombined_drug_fitted_responses,
     _add_uncombined_drug_responses,
+    fit_individual_drugs,
+    fit_curve
+
 )
 from .reference import _bliss, _hsa, _loewe, _loewe_ci, _zip
 from .util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
@@ -222,13 +224,13 @@ def add_synergy(
         if has_ref:
             df = df.with_columns(loewe_syn=pl.col(response_col) - pl.col("loewe_ref"))
             if include_ci:
-                fits = xfit.fit_individual_drugs(
+                fits = fit_individual_drugs(
                     df, dose_cols, response_col, experiment_cols, log=log
                 )
                 df = _loewe_ci(df, dose_cols, experiment_cols, fits, response_col)
 
         else:
-            fits = xfit.fit_individual_drugs(
+            fits = fit_individual_drugs(
                 df, dose_cols, response_col, experiment_cols, log=log
             )
             df = _add_uncombined_drug_fitted_responses(
@@ -320,7 +322,7 @@ def _calc_y_add_a_to_b(
     for _, b in grouped_by_b:
         min_resp = _get_min(b, uncombined_resp_cols[b_index])
 
-        fit = xfit.fit_curve(
+        fit = fit_curve(
             b[drug_cols[a_index]],
             b[resp_col],
             n_param=3,

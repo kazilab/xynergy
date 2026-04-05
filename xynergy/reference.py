@@ -1,10 +1,10 @@
 import numpy as np
 import polars as pl
 
-import .fit as fit
 from .fit import (
     _add_uncombined_drug_fitted_responses,
     _add_uncombined_drug_responses,
+    fit_individual_drugs
 )
 from .util import _add_id_if_no_experiment_cols, make_list_if_str_or_none
 from .validate import ensure_all_cols_in_df
@@ -102,7 +102,7 @@ def add_reference(
         df = df.drop(uncombined_resp_cols)
 
     if "loewe" in method:
-        fits = fit.fit_individual_drugs(
+        fits = fit_individual_drugs(
             df, dose_cols, response_col, experiment_cols, log=log
         )
         df = _add_uncombined_drug_fitted_responses(

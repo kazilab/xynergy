@@ -3,7 +3,7 @@ import warnings
 import polars as pl
 
 from .util import make_list_if_str_or_none
-from .validate import *
+from .validate import ensure_all_cols_in_df
 
 
 def tidy(

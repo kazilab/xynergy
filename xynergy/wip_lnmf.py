@@ -2,7 +2,7 @@ import numpy as np
 import scipy.linalg as la
 import optuna
 from .factor import _to_mat
-import .fit as xfit
+from .fit import fit_individual_drugs
 import polars as pl
 
 
@@ -23,7 +23,7 @@ def use_lnmf(x, dose_cols, response_col):
     max_val = x[response_col].max()
     min_val = x[response_col].min()
 
-    fits = xfit.fit_individual_drugs(x, dose_cols, response_col, None)
+    fits = fit_individual_drugs(x, dose_cols, response_col, None)
 
     # As noted above, unclear which slope/ic50 to use - so in the style of HSA
     # we'll chose the params from the more potent one

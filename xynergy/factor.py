@@ -10,7 +10,7 @@ from .util import (
     make_list_if_str_or_none,
     venter,
 )
-from .validate import *
+from .validate import ensure_all_cols_in_df
 
 try:
     import cvxpy as cp
