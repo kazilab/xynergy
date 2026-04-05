@@ -737,9 +737,9 @@ def post_impute(
         - "Predefined": Use fixed hyperparameters (learning_rate=0.1,
           max_depth=3, subsample=0.9, gamma=0.5, n_estimators=50). Very fast.
         - "RandomizedSearchCV": Sample a subset of the hyperparameter space
-          (20 random combinations, 3-fold CV). Moderate speed.
+          (20 random combinations, up to 3-fold CV). Moderate speed.
         - "GridSearchCV": Exhaustive search over the full hyperparameter grid
-          (324 combinations, 3-fold CV). Slowest but most thorough.
+          (324 combinations, up to 3-fold CV). Slowest but most thorough.
 
     log: string, default "all"
         Verbosity of function. Options include "all", "warn", and "none".
@@ -788,7 +788,7 @@ def post_impute(
         "max_depth": [2, 3, 4],
         "subsample": [0.8, 0.9, 1.0],
         "gamma": [0, 0.5, 1],
-        "n_estimator": [25, 50, 75, 100],
+        "n_estimators": [25, 50, 75, 100],
     }
 
     out = []
@@ -801,14 +801,24 @@ def post_impute(
             pl.col(response_col).is_null() | pl.col(response_col).is_nan()
         )
 
-        if post_impute_tuning == "Predefined":
+        effective_tuning = post_impute_tuning
+        cv_splits = min(3, train.height)
+        if effective_tuning != "Predefined" and cv_splits < 2:
+            if log in {"all", "warn"}:
+                print(
+                    "Too few observed rows for cross-validation; "
+                    "falling back to Predefined post-imputation XGBoost parameters."
+                )
+            effective_tuning = "Predefined"
+
+        if effective_tuning == "Predefined":
             # Use fixed hyperparameters — no search, very fast
             predefined_params = {
                 "learning_rate": 0.1,
                 "max_depth": 3,
                 "subsample": 0.9,
                 "gamma": 0.5,
-                "n_estimator": 50,
+                "n_estimators": 50,
             }
             model = XGBRegressor(
                 **predefined_params,
@@ -819,11 +829,13 @@ def post_impute(
             )
             model.fit(train.select(keep), train[response_col])
             prediction = model.predict(test.select(keep))
-            test = test.with_columns(response=prediction)
+            test = test.with_columns(
+                pl.Series(response_col, prediction).cast(pl.Float32)
+            )
 
         else:
             # RandomizedSearchCV or GridSearchCV
-            if post_impute_tuning == "RandomizedSearchCV":
+            if effective_tuning == "RandomizedSearchCV":
                 opt = RandomizedSearchCV(
                     XGBRegressor(
                         verbosity=0,
@@ -834,7 +846,7 @@ def post_impute(
                     param_distributions=space,
                     n_iter=20,
                     scoring="neg_mean_squared_error",
-                    cv=3,
+                    cv=cv_splits,
                     verbose=0,
                     error_score="raise",
                     random_state=0,
@@ -849,7 +861,7 @@ def post_impute(
                     ),
                     param_grid=space,
                     scoring="neg_mean_squared_error",
-                    cv=3,
+                    cv=cv_splits,
                     verbose=0,
                     error_score="raise",
                 )
@@ -867,16 +879,18 @@ def post_impute(
                     random_state=12,
                     n_jobs=None,
                 )
-                model.fit(train.select(keep), train["response"])
+                model.fit(train.select(keep), train[response_col])
                 prediction = model.predict(test.select(keep))
                 predictions.append(prediction)
             predictions_array = np.array(predictions)
             predictions_median = np.median(predictions_array, axis=0)
-            test = test.with_columns(response=predictions_median)
+            test = test.with_columns(
+                pl.Series(response_col, predictions_median).cast(pl.Float32)
+            )
 
         # Prediction output is Float32, so to append the two we need to downcast
         # the original responses:
-        train = train.with_columns(train["response"].cast(pl.Float32))
+        train = train.with_columns(pl.col(response_col).cast(pl.Float32))
         out.append(pl.concat([train, test]))
     out = pl.concat(out)
 

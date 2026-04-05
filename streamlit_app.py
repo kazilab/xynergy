@@ -122,10 +122,11 @@ use_single_drug = st.sidebar.toggle(
 )
 
 post_impute_tuning = st.sidebar.selectbox(
-    "XGBoost Parameters",
+    "Post-imputation XGBoost tuning",
     ["Predefined", "RandomizedSearchCV", "GridSearchCV"],
     index=0,
     help=(
+        "Controls the final XGBoost model used after factorization. "
         "Predefined: fixed params (fast). "
         "RandomizedSearchCV: sampled search (moderate). "
         "GridSearchCV: exhaustive search (slow)."

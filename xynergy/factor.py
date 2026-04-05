@@ -286,6 +286,16 @@ def _factor_by_group(
     return x
 
 
+def _collapse_factorization_runs(final: pl.DataFrame, shape: tuple[int, int]) -> np.ndarray:
+    """Collapse repeated factorization runs to a single matrix via Venter mode.
+
+    This avoids relying on newer Polars `map_batches(..., returns_scalar=True)`
+    behaviour, which is not available in all environments.
+    """
+    modes = np.array([venter(row) for row in final.to_numpy()], dtype=float)
+    return modes.reshape(shape).transpose()
+
+
 def _nmf(x):
     """Calculate something *like* 'composite of weighted penalized NMF' (cNMF)
 
@@ -328,8 +338,7 @@ def _nmf(x):
         out = pl.DataFrame(w @ h).unpivot().drop("variable")
         out.columns = [str(i)]
         final = pl.concat([final, out], how="horizontal")
-    modes = final.transpose().select(pl.all().map_batches(venter, return_dtype=pl.Float64, returns_scalar=True)).transpose()
-    return modes.to_numpy().reshape(x.shape).transpose()
+    return _collapse_factorization_runs(final, x.shape)
 
 
 def _svd(x):
@@ -349,8 +358,7 @@ def _svd(x):
         out.columns = [str(i)]
         final = pl.concat([final, out], how="horizontal")
 
-    modes = final.transpose().select(pl.all().map_batches(venter, return_dtype=pl.Float64, returns_scalar=True)).transpose()
-    return modes.to_numpy().reshape(x.shape).transpose()
+    return _collapse_factorization_runs(final, x.shape)
 
 
 def _rpca(x, l=None):
@@ -423,5 +431,4 @@ def _pmf(x):
         out.columns = [str(i)]
         final = pl.concat([final, out], how="horizontal")
 
-    modes = final.transpose().select(pl.all().map_batches(venter, return_dtype=pl.Float64, returns_scalar=True)).transpose()
-    return modes.to_numpy().reshape(x.shape).transpose()
+    return _collapse_factorization_runs(final, x.shape)

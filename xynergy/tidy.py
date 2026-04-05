@@ -81,7 +81,7 @@ def tidy(
     """
     # Make str args of column names become lists
     response_col = make_list_if_str_or_none(response_col)
-    experiment_cols = make_list_if_str_or_none(experiment_cols)
+    experiment_cols = list(make_list_if_str_or_none(experiment_cols))
     dose_cols = make_list_if_str_or_none(dose_cols)
 
     if len(dose_cols) != 2:
@@ -115,7 +115,7 @@ def tidy(
     if complete_response_is_0:
         df = df.with_columns((100 - pl.col("response")).alias("response"))
 
-    experiment_cols.append("experiment_id")
+    experiment_cols = experiment_cols + ["experiment_id"]
 
     # In case someone provides only the wells that have data in them, the
     # missing wells will need to be added
