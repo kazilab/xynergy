@@ -236,20 +236,22 @@ if "result" in st.session_state:
     if syn_cols:
         st.subheader("Synergy landscapes")
         selected_syn = st.selectbox("Synergy method to plot", syn_cols)
+        # Derive display name: "bliss_syn" -> "BLISS Synergy"
+        syn_display = selected_syn.replace("_syn", "").upper() + " Synergy"
         tab_2d_syn, tab_3d_syn = st.tabs(["2D Heatmap", "3D Surface"])
         with tab_2d_syn:
             syn_chart = plot_response_landscape(
                 exp_df,
                 response_col=selected_syn,
                 scheme="redblue",
-                response_label=selected_syn,
+                response_label=syn_display,
             )
             st.altair_chart(syn_chart, use_container_width=True)
         with tab_3d_syn:
             fig_3d_syn = plot_synergy_3d(
                 exp_df,
                 response_col=selected_syn,
-                response_label=selected_syn,
+                response_label=syn_display,
                 colorscale="RdBu",
             )
             st.plotly_chart(fig_3d_syn, use_container_width=True)

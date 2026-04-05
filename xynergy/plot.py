@@ -99,7 +99,19 @@ def plot_synergy_3d(
             )
         ]
     )
+    # Compute summary scores from the raw (non-interpolated) matrix
+    valid_vals = z_matrix[~np.isnan(z_matrix)]
+    score_min = float(np.min(valid_vals)) if valid_vals.size else 0.0
+    score_max = float(np.max(valid_vals)) if valid_vals.size else 0.0
+    score_avg = float(np.mean(valid_vals)) if valid_vals.size else 0.0
+
+    title = (
+        f"<b>{response_label}</b>"
+        f"  —  Avg: {score_avg:.2f}  |  Min: {score_min:.2f}  |  Max: {score_max:.2f}"
+    )
+
     fig.update_layout(
+        title=dict(text=title, x=0.5, xanchor="center"),
         scene=dict(
             xaxis=dict(
                 title=b,
@@ -113,7 +125,7 @@ def plot_synergy_3d(
             ),
             zaxis=dict(title=response_label),
         ),
-        margin=dict(l=0, r=0, t=40, b=0),
+        margin=dict(l=0, r=0, t=60, b=0),
         height=550,
     )
     return fig
