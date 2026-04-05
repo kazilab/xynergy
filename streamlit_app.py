@@ -110,6 +110,17 @@ use_single_drug = st.sidebar.toggle(
     "Use single-drug response data", value=True
 )
 
+post_impute_tuning = st.sidebar.selectbox(
+    "XGBoost Parameters",
+    ["Predefined", "RandomizedSearchCV", "GridSearchCV"],
+    index=0,
+    help=(
+        "Predefined: fixed params (fast). "
+        "RandomizedSearchCV: sampled search (moderate). "
+        "GridSearchCV: exhaustive search (slow)."
+    ),
+)
+
 log_level = st.sidebar.selectbox("Log verbosity", ["all", "warn", "none"], index=0)
 
 # ---------------------------------------------------------------------------
@@ -208,6 +219,7 @@ if df is not None and dose_cols and response_col:
                 factorization_method=factorization_method,
                 synergy_method=synergy_methods,
                 use_single_drug_response_data=use_single_drug,
+                post_impute_tuning=post_impute_tuning,
                 log=log_level,
             )
         st.session_state["result"] = result

@@ -10,7 +10,7 @@ from sklearn.gaussian_process.kernels import ConstantKernel, RBF, WhiteKernel
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.linear_model import LassoCV
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from xgboost import XGBRegressor
 
 from xynergy.fit import add_uncombined_drug_responses
@@ -697,6 +697,7 @@ def post_impute(
     experiment_cols: str | list[str] | None = "experiment_id",
     imputed_response_cols: list[str] | None = None,
     imputed_resp_prefix: str = "resp_imputed_",
+    post_impute_tuning: str = "Predefined",
     log: str = "all",
 ):
     """Predict missing data using matrix factorization.
@@ -729,6 +730,16 @@ def post_impute(
         Only used if ``imputed_response_cols`` is ``None``. When looking for columns
         to use for imputation, will use columns that have this prefix in their
         name.
+
+    post_impute_tuning: string, default "Predefined"
+        Strategy for tuning XGBoost hyperparameters in post-imputation.
+
+        - "Predefined": Use fixed hyperparameters (learning_rate=0.1,
+          max_depth=3, subsample=0.9, gamma=0.5, n_estimators=50). Very fast.
+        - "RandomizedSearchCV": Sample a subset of the hyperparameter space
+          (20 random combinations, 3-fold CV). Moderate speed.
+        - "GridSearchCV": Exhaustive search over the full hyperparameter grid
+          (324 combinations, 3-fold CV). Slowest but most thorough.
 
     log: string, default "all"
         Verbosity of function. Options include "all", "warn", and "none".
@@ -766,6 +777,12 @@ def post_impute(
 
     keep = dose_cols + imputed_response_cols
 
+    if post_impute_tuning not in ["Predefined", "RandomizedSearchCV", "GridSearchCV"]:
+        raise ValueError(
+            "`post_impute_tuning` must be one of "
+            "['Predefined', 'RandomizedSearchCV', 'GridSearchCV']"
+        )
+
     space = {
         "learning_rate": [0.01, 0.05, 0.1],
         "max_depth": [2, 3, 4],
@@ -774,19 +791,6 @@ def post_impute(
         "n_estimator": [25, 50, 75, 100],
     }
 
-    opt = GridSearchCV(
-        XGBRegressor(
-            verbosity=0,
-            objective="reg:squarederror",
-            random_state=0,
-            n_jobs=None,
-        ),
-        param_grid=space,
-        scoring="neg_mean_squared_error",
-        cv=3,
-        verbose=0,
-        error_score="raise",
-    )
     out = []
     grouped = df.group_by(experiment_cols)
     for _, group in grouped:
@@ -796,25 +800,80 @@ def post_impute(
         test = group.filter(
             pl.col(response_col).is_null() | pl.col(response_col).is_nan()
         )
-        opt.fit(train.select(keep), train[response_col])
-        results = pl.DataFrame(opt.cv_results_, strict=False)
-        top_10_params = results.sort("rank_test_score").head(10)["params"].to_list()
 
-        predictions = []
-        for params in top_10_params:
+        if post_impute_tuning == "Predefined":
+            # Use fixed hyperparameters — no search, very fast
+            predefined_params = {
+                "learning_rate": 0.1,
+                "max_depth": 3,
+                "subsample": 0.9,
+                "gamma": 0.5,
+                "n_estimator": 50,
+            }
             model = XGBRegressor(
-                **params,
+                **predefined_params,
                 verbosity=0,
                 objective="reg:squarederror",
-                random_state=12,
+                random_state=0,
                 n_jobs=None,
             )
-            model.fit(train.select(keep), train["response"])
+            model.fit(train.select(keep), train[response_col])
             prediction = model.predict(test.select(keep))
-            predictions.append(prediction)
-        predictions_array = np.array(predictions)
-        predictions_median = np.median(predictions_array, axis=0)
-        test = test.with_columns(response=predictions_median)
+            test = test.with_columns(response=prediction)
+
+        else:
+            # RandomizedSearchCV or GridSearchCV
+            if post_impute_tuning == "RandomizedSearchCV":
+                opt = RandomizedSearchCV(
+                    XGBRegressor(
+                        verbosity=0,
+                        objective="reg:squarederror",
+                        random_state=0,
+                        n_jobs=None,
+                    ),
+                    param_distributions=space,
+                    n_iter=20,
+                    scoring="neg_mean_squared_error",
+                    cv=3,
+                    verbose=0,
+                    error_score="raise",
+                    random_state=0,
+                )
+            else:  # GridSearchCV
+                opt = GridSearchCV(
+                    XGBRegressor(
+                        verbosity=0,
+                        objective="reg:squarederror",
+                        random_state=0,
+                        n_jobs=None,
+                    ),
+                    param_grid=space,
+                    scoring="neg_mean_squared_error",
+                    cv=3,
+                    verbose=0,
+                    error_score="raise",
+                )
+
+            opt.fit(train.select(keep), train[response_col])
+            results = pl.DataFrame(opt.cv_results_, strict=False)
+            top_10_params = results.sort("rank_test_score").head(10)["params"].to_list()
+
+            predictions = []
+            for params in top_10_params:
+                model = XGBRegressor(
+                    **params,
+                    verbosity=0,
+                    objective="reg:squarederror",
+                    random_state=12,
+                    n_jobs=None,
+                )
+                model.fit(train.select(keep), train["response"])
+                prediction = model.predict(test.select(keep))
+                predictions.append(prediction)
+            predictions_array = np.array(predictions)
+            predictions_median = np.median(predictions_array, axis=0)
+            test = test.with_columns(response=predictions_median)
+
         # Prediction output is Float32, so to append the two we need to downcast
         # the original responses:
         train = train.with_columns(train["response"].cast(pl.Float32))

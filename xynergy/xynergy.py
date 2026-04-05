@@ -20,6 +20,7 @@ def xynergy(
     factorization_method: list[str] | str = ["NMF", "SVD", "RPCA"],
     synergy_method: list[str] | str = ["bliss", "hsa", "loewe", "zip"],
     use_single_drug_response_data: bool = True,
+    post_impute_tuning: str = "Predefined",
     log: str = "all",
 ) -> pl.DataFrame:
     """Impute missing values and calculate synergy from a (or several) dose-response matrices.
@@ -99,6 +100,13 @@ def xynergy(
         `additional_imputation_cols`. In general, this step can only help and is
         relatively quick.
 
+    post_impute_tuning: string, default "Predefined"
+        Strategy for tuning XGBoost hyperparameters during post-imputation.
+
+        - "Predefined": Use fixed hyperparameters (very fast).
+        - "RandomizedSearchCV": Random subset search (moderate speed).
+        - "GridSearchCV": Exhaustive grid search (slowest).
+
     log: string, default "all"
         Verbosity of function. Options include "all", "warn", and "none".
 
@@ -171,7 +179,7 @@ def xynergy(
         log=log,
     )
 
-    imputed = post_impute(df=factored, experiment_cols=experiment_cols, log=log)
+    imputed = post_impute(df=factored, experiment_cols=experiment_cols, post_impute_tuning=post_impute_tuning, log=log)
 
     with_synergy = add_synergy(
         imputed, experiment_cols=experiment_cols, method=synergy_method, log=log
