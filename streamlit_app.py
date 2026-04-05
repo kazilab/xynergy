@@ -1,7 +1,13 @@
 """Streamlit web app for xynergy drug synergy analysis."""
 
 import io
-from importlib.util import find_spec
+import os
+import tempfile
+
+# Matplotlib needs a writable config directory in this environment.
+MPLCONFIGDIR = os.path.join(tempfile.gettempdir(), "xynergy-mpl")
+os.makedirs(MPLCONFIGDIR, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", MPLCONFIGDIR)
 
 import matplotlib
 import polars as pl
@@ -17,7 +23,20 @@ from xynergy._meta import (
 
 matplotlib.use("Agg")
 
-HAS_CVXPY = find_spec("cvxpy") is not None
+
+def _module_is_importable(module_name: str) -> bool:
+    try:
+        __import__(module_name)
+    except Exception:
+        return False
+    return True
+
+
+def _factorization_result_columns(columns: list[str]) -> list[str]:
+    return [column for column in columns if column.startswith("resp_imputed_")]
+
+
+HAS_CVXPY = _module_is_importable("cvxpy")
 
 st.set_page_config(page_title=APP_NAME, page_icon="🧬", layout="wide")
 
@@ -68,14 +87,18 @@ pre_impute_reference = st.sidebar.selectbox(
 clip_response = st.sidebar.toggle("Clip response to 0–100", value=True)
 clip_bounds = (0.0, 100.0) if clip_response else None
 
-factorization_methods = st.sidebar.multiselect(
-    "Factorization methods",
-    ["NMF", "SVD", "RPCA", "PMF"],
-    default=["NMF", "SVD", "RPCA"] if HAS_CVXPY else ["NMF", "SVD"],
+factorization_options = ["NMF", "SVD", "PMF"]
+if HAS_CVXPY:
+    factorization_options.insert(2, "RPCA")
+
+factorization_method = st.sidebar.selectbox(
+    "Factorization method",
+    factorization_options,
+    index=0,
 )
 
 if not HAS_CVXPY:
-    st.sidebar.info("`cvxpy` is unavailable, so `RPCA` is excluded by default.")
+    st.sidebar.info("`cvxpy` is unavailable, so `RPCA` is excluded.")
 
 synergy_methods = st.sidebar.multiselect(
     "Synergy methods",
@@ -116,7 +139,7 @@ if use_example:
         "inhibition-style responses."
     )
     st.success(f"Example data loaded — {df.shape[0]} rows, {df.shape[1]} columns")
-    st.dataframe(df.head(50).to_pandas(), use_container_width=True)
+    st.dataframe(df.head(50).to_pandas(), width="stretch")
 else:
     uploaded = st.file_uploader(
         "Upload a CSV or Excel file",
@@ -133,7 +156,7 @@ else:
             df = pl.from_pandas(pd.read_excel(uploaded))
 
         st.success(f"Loaded {df.shape[0]} rows, {df.shape[1]} columns")
-        st.dataframe(df.head(50).to_pandas(), use_container_width=True)
+        st.dataframe(df.head(50).to_pandas(), width="stretch")
 
         all_cols = df.columns
 
@@ -165,9 +188,7 @@ else:
 st.header("2. Run analysis")
 
 if df is not None and dose_cols and response_col:
-    if not factorization_methods:
-        st.warning("Select at least one factorization method.")
-    elif not synergy_methods:
+    if not synergy_methods:
         st.warning("Select at least one synergy method.")
     elif st.button("Run xynergy", type="primary", use_container_width=True):
         from xynergy.xynergy import xynergy
@@ -184,7 +205,7 @@ if df is not None and dose_cols and response_col:
                 pre_impute_target=pre_impute_target,
                 pre_impute_reference_for_target=pre_impute_reference,
                 pre_impute_clip_response_bounds=clip_bounds,
-                factorization_method=factorization_methods,
+                factorization_method=factorization_method,
                 synergy_method=synergy_methods,
                 use_single_drug_response_data=use_single_drug,
                 log=log_level,
@@ -198,7 +219,7 @@ if "result" in st.session_state:
     result: pl.DataFrame = st.session_state["result"]
 
     st.header("3. Results")
-    st.dataframe(result.head(200).to_pandas(), use_container_width=True)
+    st.dataframe(result.head(200).to_pandas(), width="stretch")
 
     # --- Download button ---
     csv_buf = io.BytesIO()
@@ -224,12 +245,12 @@ if "result" in st.session_state:
     tab_2d_resp, tab_3d_resp = st.tabs(["2D Heatmap", "3D Surface"])
     with tab_2d_resp:
         chart = plot_response_landscape(exp_df)
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width="stretch")
     with tab_3d_resp:
         fig_3d_resp = plot_synergy_3d(
             exp_df, response_col="response", response_label="Response"
         )
-        st.plotly_chart(fig_3d_resp, use_container_width=True)
+        st.plotly_chart(fig_3d_resp, width="stretch")
 
     # Synergy landscapes
     syn_cols = [c for c in result.columns if c.endswith("_syn")]
@@ -246,7 +267,7 @@ if "result" in st.session_state:
                 scheme="redblue",
                 response_label=syn_display,
             )
-            st.altair_chart(syn_chart, use_container_width=True)
+            st.altair_chart(syn_chart, width="stretch")
         with tab_3d_syn:
             fig_3d_syn = plot_synergy_3d(
                 exp_df,
@@ -254,10 +275,10 @@ if "result" in st.session_state:
                 response_label=syn_display,
                 colorscale="RdBu",
             )
-            st.plotly_chart(fig_3d_syn, use_container_width=True)
+            st.plotly_chart(fig_3d_syn, width="stretch")
 
     # Factorization landscapes
-    factor_cols = [c for c in result.columns if c.startswith("response_")]
+    factor_cols = _factorization_result_columns(result.columns)
     if factor_cols:
         st.subheader("Factorization approximations")
         selected_factor = st.selectbox("Factorization method to plot", factor_cols)
@@ -268,13 +289,13 @@ if "result" in st.session_state:
                 response_col=selected_factor,
                 response_label=selected_factor,
             )
-            st.altair_chart(factor_chart, use_container_width=True)
+            st.altair_chart(factor_chart, width="stretch")
         with tab_3d_fac:
             fig_3d_fac = plot_synergy_3d(
                 exp_df,
                 response_col=selected_factor,
                 response_label=selected_factor,
             )
-            st.plotly_chart(fig_3d_fac, use_container_width=True)
+            st.plotly_chart(fig_3d_fac, width="stretch")
 else:
     st.info("Configure parameters in the sidebar, load data above, then click **Run xynergy**.")
