@@ -15,6 +15,10 @@ def plot_synergy_3d(
 ) -> go.Figure:
     """Create an interactive 3D surface plot of synergy or response data.
 
+    Uses evenly-spaced index axes with dose tick labels, matching the
+    traditional synergy surface layout where doses (which often span
+    orders of magnitude) are spaced uniformly.
+
     Parameters
     ----------
     df : polars.DataFrame
@@ -43,21 +47,22 @@ def plot_synergy_3d(
         .sort(dose_cols)
     )
 
-    dose_a_vals = pivot[a].unique().sort().to_numpy()
-    dose_b_vals = pivot[b].unique().sort().to_numpy()
+    dose_a_vals = np.sort(pivot[a].unique().to_numpy())
+    dose_b_vals = np.sort(pivot[b].unique().to_numpy())
 
-    # Build the Z matrix
+    # Build the Z matrix on index-based grid (like the matplotlib version)
     z_matrix = np.full((len(dose_a_vals), len(dose_b_vals)), np.nan)
     a_idx = {v: i for i, v in enumerate(dose_a_vals)}
     b_idx = {v: i for i, v in enumerate(dose_b_vals)}
     for row in pivot.iter_rows(named=True):
         z_matrix[a_idx[row[a]], b_idx[row[b]]] = row[response_col]
 
+    # Use integer indices for evenly-spaced axes
+    x_indices = np.arange(len(dose_b_vals))
+    y_indices = np.arange(len(dose_a_vals))
+
     if interpolate and min(len(dose_a_vals), len(dose_b_vals)) >= 3:
-        # Create fine grid for smooth surface
-        x_coarse, y_coarse = np.meshgrid(
-            np.arange(len(dose_b_vals)), np.arange(len(dose_a_vals))
-        )
+        x_coarse, y_coarse = np.meshgrid(x_indices, y_indices)
         valid = ~np.isnan(z_matrix)
         x_fine = np.linspace(0, len(dose_b_vals) - 1, 50)
         y_fine = np.linspace(0, len(dose_a_vals) - 1, 50)
@@ -68,31 +73,45 @@ def plot_synergy_3d(
             (x_fine_grid, y_fine_grid),
             method="cubic",
         )
-        # Map fine grid indices back to dose values
-        x_labels = np.interp(x_fine, np.arange(len(dose_b_vals)), dose_b_vals)
-        y_labels = np.interp(y_fine, np.arange(len(dose_a_vals)), dose_a_vals)
+        surf_x = x_fine
+        surf_y = y_fine
     else:
-        x_labels = dose_b_vals
-        y_labels = dose_a_vals
+        surf_x = x_indices
+        surf_y = y_indices
         z_fine = z_matrix
+
+    # Format dose tick labels
+    def _fmt(v):
+        return f"{v:g}" if v != 0 else "0"
+
+    a_ticktext = [_fmt(v) for v in dose_a_vals]
+    b_ticktext = [_fmt(v) for v in dose_b_vals]
 
     fig = go.Figure(
         data=[
             go.Surface(
-                x=x_labels,
-                y=y_labels,
+                x=surf_x,
+                y=surf_y,
                 z=z_fine,
                 colorscale=colorscale,
                 colorbar=dict(title=response_label),
-                opacity=0.9,
+                opacity=0.85,
             )
         ]
     )
     fig.update_layout(
         scene=dict(
-            xaxis_title=b,
-            yaxis_title=a,
-            zaxis_title=response_label,
+            xaxis=dict(
+                title=b,
+                tickvals=list(range(len(dose_b_vals))),
+                ticktext=b_ticktext,
+            ),
+            yaxis=dict(
+                title=a,
+                tickvals=list(range(len(dose_a_vals))),
+                ticktext=a_ticktext,
+            ),
+            zaxis=dict(title=response_label),
         ),
         margin=dict(l=0, r=0, t=40, b=0),
         height=550,
