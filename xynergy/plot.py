@@ -1,8 +1,7 @@
+from __future__ import annotations
+
 import altair as alt
-import numpy as np
-import plotly.graph_objects as go
 import polars as pl
-from scipy.interpolate import griddata
 
 
 def plot_synergy_3d(
@@ -38,6 +37,10 @@ def plot_synergy_3d(
     -------
     plotly.graph_objects.Figure
     """
+    import numpy as np
+    import plotly.graph_objects as go
+    from scipy.interpolate import griddata
+
     a, b = dose_cols
 
     # Aggregate duplicates
