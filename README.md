@@ -3,7 +3,7 @@
 <!-- PyPI version badge -->
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://xynergy.streamlit.app)
 [![PyPI version](https://img.shields.io/pypi/v/xynergy.svg)](https://pypi.org/project/xynergy/)
-[![Documentation Status](https://xynergy.org/projects/xynergy/badge/?version=latest)](https://xynergy.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/xynergy/badge/?version=latest)](https://xynergy.readthedocs.io/en/latest/?badge=latest)
 <!-- PyPI version badge -->
 [![@KaziLab.se](https://img.shields.io/website?url=https://www.kazilab.se/)](https://www.kazilab.se/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
